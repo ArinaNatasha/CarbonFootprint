@@ -4,8 +4,10 @@ library(shiny)
 library(shinydashboard)
 library(shinyWidgets)
 library(plotly)
+library(ggcorrplot)
 library(ggplot2)
 library(dplyr) 
+library(readr)
 
 
 #### --- Import data ----
@@ -104,6 +106,26 @@ sources_region_cumulative_plot = function(db) {
   ggplotly(g, tooltip = c("text"))
 }
 
+#function for forecast purpose (heatmap)
+forecast_co2_plot = function(db) {
+  
+  corr_data <- subset(db, select = c("cement_co2", "coal_co2", "flaring_co2", 
+                                            "gas_co2", "oil_co2", "other_industry_co2"))
+  
+  # create a corr matrix and corresponding p-value matrix
+  corr_mat <- round(cor(corr_data),2) # round off to 2dp
+  p_mat <- cor_pmat(corr_data)
+  
+  # plotting the interactive corr heatmap
+  corr_mat <- ggcorrplot(
+    corr_mat, hc.order = TRUE, type = "lower",
+    outline.col = "white",
+    p.mat = p_mat
+  )
+  ggplotly(corr_mat)
+  
+}
+
 
 #### --- UI ----
 ui <- dashboardPage(
@@ -116,8 +138,56 @@ ui <- dashboardPage(
   dashboardBody(
     tabsetPanel(
       id = "tabset",
-      tabPanel(title = "Home"
+      tabPanel(title = "Home",
                
+               fluidRow(
+                 box(
+                   title = "Introduction",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   collapsible = TRUE,
+                   span(tags$b(h4("Carbon footprint is the total quantity of carbon dioxide (CO2) that a person, business, product, or event emits, either directly or indirectly. As we ")), style="color:#06283D"),
+                   span(tags$b(h4("may already be aware, carbon dioxide is a form of greenhouse gas that has been significantly impacting our world, especially in terms of climate ")), style="color:#06283D"),
+                   span(tags$b(h4("changes. Despite the fact that there is a growing awareness of carbon emissions, our society has only made modest to minimal efforts. Therefore, we ")), style="color:#06283D"),
+                   span(tags$b(h4("created this website to highlight and remind people how important this issue is. It is our aim that this website will provide valuable insight based ")), style="color:#06283D"),
+                   span(tags$b(h4("on our study and raise society's understanding of the need to preserve the environment. ")), style="color:#06283D")
+                 )),
+               
+               fluidRow(
+                 box(
+                   title = "Problem Statement",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   collapsible = TRUE, 
+                   span(tags$b(h4("The latest reports of abrupt climate changes around the world have been hot topics for some time. However, we haven't come across any websites that ")), style="color:#06283D"),
+                   span(tags$b(h4("focus on analyzing and delivering data stories on carbon footprint in order to address this issue.")), style="color:#06283D")
+
+                 )),
+               
+               fluidRow(  
+                 box(
+                   title = "Objectives",
+                   status = "primary",
+                   solidHeader = TRUE,
+                   collapsible = TRUE,
+                   span(tags$b(h4(". To provide an overall picture of the amount of CO2 emitted over time.")), style="color:#06283D"),
+                   span(tags$b(h4(". To display which regions emit the most CO2 based on year and source of emission.")), style="color:#06283D"),
+                   span(tags$b(h4(". To determine which sources contribute the most to CO2 emissions for each region.")), style="color:#06283D"),
+                   span(tags$b(h4(". To demonstrate how carbon footprint will evolve in the future.")), style="color:#06283D"),
+                   
+                 ),
+                 box(
+                   title = "Solution proposed",
+                   status = "primary",
+                   solidHeader = TRUE, 
+                   collapsible = TRUE,
+                   span(tags$b(h4("A website with three tabs: Global overview, Regional overview, and ")), style="color:#06283D"),
+                   span(tags$b(h4("Carbon forecast to achieve our objectives.")), style="color:#06283D")
+                   
+                 ))
+          
       ),
       tabPanel("Overview plots",
                sidebarLayout(
@@ -169,8 +239,17 @@ ui <- dashboardPage(
                 )
       ),
       
-      tabPanel(title = "Forecast"
-               
+      tabPanel(title = "Forecast",
+               fluidRow(  
+                 box(
+                   title = "Heat Map",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   collapsible = FALSE,
+                   plotlyOutput("forecast_plot", height = "300px")
+                 )
+                )
       ),
       
       
@@ -260,6 +339,11 @@ server <- function(input, output, session) {
   # cumulative country-specific plots
   output$country_plot_cumulative <- renderPlotly({
     sources_region_cumulative_plot(country_reactive_db())
+  })
+  
+  #forecast
+  output$forecast_plot <- renderPlotly({
+    forecast_co2_plot(cf_global)
   })
 }
 
