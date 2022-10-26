@@ -175,7 +175,7 @@ ui <- dashboardPage(
                      span(h4(tags$li("To provide an overall picture of the amount of CO2 emitted over time.")), style="color:#06283D"),
                      span(h4(tags$li("To display which regions emit the most CO2 based on year and source of emission.")), style="color:#06283D"),
                      span(h4(tags$li("To determine which sources contribute the most to CO2 emissions for each region.")), style="color:#06283D"),
-                     span(h4(tags$li("To demonstrate how carbon footprint will evolve in the future.")), style="color:#06283D"),
+                     span(h4(tags$li("To demonstrate how carbon footprint will evolve in the future.")), style="color:#06283D")
                      
                    ),
                    box(
@@ -282,7 +282,13 @@ ui <- dashboardPage(
                    title = "Acknowledgement",
                    status = "primary",
                    width = 12,
-                   solidHeader = TRUE 
+                   solidHeader = TRUE,
+                   span((h4("First and foremost, we would like to thank the Ministry of Science, Technology, and Innovation for hosting the Malaysia Techlympics. We are able to ")), style="color:#06283D"),
+                   span((h4("explore and learn more about how to use our knowledge to address challenges in the real world.")), style="color:#06283D"),
+                   span((h4(tags$br("We would also like to convey our sincere gratitude to the lecturers at the Faculty of Computer Science (FCSIT) at the University of Malaya for "))), style="color:#06283D"),
+                   span((h4("guiding us to where we are now.  With their direction, we are able to convey our ideas and solutions as effectively as possible. ")), style="color:#06283D"),
+                   span((h4(tags$br("Last but not least, we would like to express our special thanks to our family and friends for their unwavering support to complete this project. "))), style="color:#06283D")
+
                  )
                ),
                
@@ -293,13 +299,23 @@ ui <- dashboardPage(
                    width = 12,
                    solidHeader = TRUE,
                    box(
-                     span(h4(tags$b("Norhidayah Arbee")), style="color:#06283D")
+                     tags$img(src="Ice cream.jpg",height='130',width='100'),
+                     span(h4(tags$b("Norhidayah Arbee")), style="color:#06283D"),
+                     span((h5("3rd year Data Science Student | University Malaya")), style="color:#06283D"),
+                     span(tags$a(h5("")), style="color:#06283D")
+                     
+                    
+                     
                    ),
                    box(
-                     span(h4(tags$b("Arina Houri")), style="color:#06283D")
+                     tags$img(src="arina.jpg",height='130',width='100'),
+                     span(h4(tags$b("Arina Houri")), style="color:#06283D"),
+                     span((h5("2nd year Data Science Student | University Malaya")), style="color:#06283D"),
+                     span(tags$a(h5("www.linkedin.com/in/arina-houri-00a972234")), style="color:#06283D")
                      
                    )
-                 ))
+                 )
+                )
        
       )#tabPanel
     )#tabsetPanel
