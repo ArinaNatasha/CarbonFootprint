@@ -248,7 +248,6 @@ ui <- dashboardPage(
                    status = "primary",
                    width = 12,
                    solidHeader = TRUE,
-                   collapsible = TRUE, 
                    plotlyOutput("global_plot")
                  )
                ),
@@ -383,7 +382,7 @@ ui <- dashboardPage(
                    width = 12,
                    solidHeader = TRUE,
                    box(
-                     tags$img(src="Ice cream.jpg",height='130',width='100'),
+                     tags$img(src="dayah.jpg",height='130',width='100'),
                      span(h4(tags$b("Siti Norhidayah Abdul Bari Arbee")), style="color:#06283D"),
                      span((h5("3rd year Data Science Student | University Malaya")), style="color:#06283D"),
                      span(tags$a(h5("https://www.linkedin.com/in/norhidayah-arbee/")), style="color:#06283D")
@@ -392,7 +391,7 @@ ui <- dashboardPage(
                      
                    ),
                    box(
-                     tags$img(src="dayah.jpg",height='130',width='100'),
+                     tags$img(src="arina.jpg",height='130',width='100'),
                      span(h4(tags$b("Arina Natasha Houri")), style="color:#06283D"),
                      span((h5("2nd year Data Science Student | University Malaya")), style="color:#06283D"),
                      span(tags$a(h5("www.linkedin.com/in/arina-houri-00a972234")), style="color:#06283D")
