@@ -12,11 +12,9 @@ library(Hmisc)
 
 
 ##### --- Import data ----
-cf_continents = read_csv("C:\\Users\\Lenovo\\Documents\\R\\TechLympics\\continents.csv")
-cf_countries = read_csv("C:\\Users\\Lenovo\\Documents\\R\\TechLympics\\countries.csv")
-cf_global = read_csv("C:\\Users\\Lenovo\\Documents\\R\\TechLympics\\world.csv")
-
-
+cf_continents <- read.csv("CarbonFootprint/Datasets/continents.csv", fileEncoding="UTF-8-BOM")
+cf_countries <- read.csv("CarbonFootprint/Datasets/countries.csv", fileEncoding="UTF-8-BOM")
+cf_global <- read.csv("CarbonFootprint/Datasets/world.csv", fileEncoding="UTF-8-BOM")
 
 #### --- Function ----
 # function to plot global emission trend by year
