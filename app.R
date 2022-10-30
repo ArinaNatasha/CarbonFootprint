@@ -244,8 +244,8 @@ ui <- dashboardPage(
                    collapsible = TRUE,
                    span((h4("A dashboard to help:")), style="color:#06283D"),
                    span(h4(tags$li("Determine major sources of carbon emissions. "), style="color:#06283D")),
-                   span(h4(tags$li("Produce trends of Co2 globally, between continents and countries. "), style="color:#06283D", style = "size:20")),
-                   span(h4(tags$li("Forecast global trends of Co2 for the next 20 years. "), style="color:#06283D", style = "size:20"))
+                   span(h4(tags$li("Produce trends of CO2 globally, between continents and countries. "), style="color:#06283D", style = "size:20")),
+                   span(h4(tags$li("Forecast global trends of CO2 for the next 20 years. "), style="color:#06283D", style = "size:20"))
                  ))
                
       ),
