@@ -1,6 +1,6 @@
-
 #### --- Library ----
-library(shiny)
+# library(shiny)
+# library(rsconnect)
 library(shinydashboard)
 library(shinyWidgets)
 library(plotly)
@@ -8,12 +8,19 @@ library(ggcorrplot)
 library(ggplot2)
 library(dplyr) 
 library(readr)
+library(forecast)
+library(Hmisc)
 
 
-#### --- Import data ----
-cf_continents <- read.csv("CarbonFootprint/Datasets/continents.csv", fileEncoding="UTF-8-BOM")
-cf_countries <- read.csv("CarbonFootprint/Datasets/countries.csv", fileEncoding="UTF-8-BOM")
-cf_global <- read.csv("CarbonFootprint/Datasets/world.csv", fileEncoding="UTF-8-BOM")
+##### --- Import data ----
+cf_continents <- read.csv("./Data/continents.csv", fileEncoding="UTF-8-BOM")
+cf_countries <- read.csv("./Data/countries.csv", fileEncoding="UTF-8-BOM")
+cf_global <- read.csv("./Data/world.csv", fileEncoding="UTF-8-BOM")
+
+
+##### --- Define data ----
+tsdata <- ts(cf_global$co2, frequency = 1, start = c(1750))
+autoarima1 <- auto.arima(tsdata)
 
 
 #### --- Function ----
@@ -26,7 +33,7 @@ global_trend_plot = function(db) {
     geom_area(fill="#69b3a2") +
     xlim(c(1750, 2020)) + 
     labs(title="Global emissions of CO2 per year",
-          x ="Year", y = "Emission (million tonnes)")+
+         x ="Year", y = "Emission (million tonnes)")+
     theme(plot.title = element_text(size = 12), 
           axis.title = element_text(size = 8), 
           plot.margin = unit(c(1,1,1,1), "cm"))
@@ -41,15 +48,15 @@ top_contributor_plot = function(db) {
     geom_bar(stat="identity")
   
   bp = bp + 
-      labs(title="Top 10 CO2 contributor per year (based on chosen source of emission)",
-            x ="Country", y = "Emission (percentage of global cumulative production-based emissions)") +
-      scale_fill_discrete(name = "Country") +
-      theme(plot.title = element_text(size = 12), 
-            axis.title = element_text(size = 7),
-            legend.title = element_text(size = 8),
-            plot.margin = unit(c(1,1,1,1), "cm"),
-            axis.ticks.x = element_blank(),
-            axis.text.x = element_blank()) 
+    labs(title="Top 10 CO2 contributor per year (based on chosen source of emission)",
+         x ="Country", y = "Emission (percentage of global cumulative production-based emissions)") +
+    scale_fill_discrete(name = "Country") +
+    theme(plot.title = element_text(size = 12), 
+          axis.title = element_text(size = 7),
+          legend.title = element_text(size = 8),
+          plot.margin = unit(c(1,1,1,1), "cm"),
+          axis.ticks.x = element_blank(),
+          axis.text.x = element_blank()) 
   
   ggplotly(bp, tooltip = c("text")) 
   
@@ -62,9 +69,9 @@ sources_region_plot = function(db) {
   data_ggp <- data.frame(x = db$year,                            # Reshape data frame
                          y = c(db$cement_co2, db$coal_co2, db$gas_co2, db$oil_co2),
                          Sources = c(rep("cement", nrow(db)),
-                                   rep("coal", nrow(db)),
-                                   rep("gas", nrow(db)),
-                                   rep("oil", nrow(db))))
+                                     rep("coal", nrow(db)),
+                                     rep("gas", nrow(db)),
+                                     rep("oil", nrow(db))))
   
   g = ggplot(data_ggp, aes( x, y, col = Sources, group = 1,
                             text = paste0("Year: ", x, "\n", "Emission: ", y, " million tonnes" ))) +     
@@ -107,10 +114,10 @@ sources_region_cumulative_plot = function(db) {
 }
 
 #function for forecast purpose (heatmap)
-forecast_co2_plot = function(db) {
+heatmap_plot = function(db) {
   
   corr_data <- subset(db, select = c("cement_co2", "coal_co2", "flaring_co2", 
-                                            "gas_co2", "oil_co2", "other_industry_co2"))
+                                     "gas_co2", "oil_co2", "other_industry_co2"))
   
   # create a corr matrix and corresponding p-value matrix
   corr_mat <- round(cor(corr_data),2) # round off to 2dp
@@ -126,6 +133,57 @@ forecast_co2_plot = function(db) {
   
 }
 
+#function for forecast purpose (projection)
+projection_plot = function(db) {
+  
+  # read in data
+  df_map <- subset(db, select = c("year", "cumulative_co2", "country", "iso_code"))
+  #df_map[,2] <- as.numeric(df_map[,2])
+  #df_map[,2] <- log(df_map[,2])
+  
+  # define appearance of the map
+  #Set country boundaries as light grey
+  l <- list(color = toRGB("#d1d1d1"), width = 0.5)
+  #Specify map projection and options
+  g <- list(
+    showframe = FALSE,
+    showcoastlines = FALSE,
+    projection = list(type = 'orthographic'),
+    resolution = '100',
+    showcountries = TRUE,
+    countrycolor = '#d1d1d1',
+    showocean = TRUE,
+    oceancolor = '#c9d2e0',
+    showlakes = TRUE,
+    lakecolor = '#99c0db',
+    showrivers = TRUE,
+    rivercolor = '#99c0db')
+  
+  # plot the map
+  p <- plot_geo(df_map) %>%
+    add_trace(z = ~cumulative_co2, color = ~cumulative_co2, colors = 'Reds', frame = ~year,
+              text = ~country, locations = ~iso_code, marker = list(line = l)) %>%
+    colorbar(title = 'Cumulative CO2') %>%
+    layout(title = '', geo = g)
+  ggplotly(p)
+  
+}
+
+forecast_plot = function(db) {
+  #in ts format
+  tsdata <- ts(db$co2, frequency = 1, start = c(1750))
+  #plot initial graph
+  autoplot(tsdata, xlab = "Year", ylab = "Number of CO2 Emission")
+  #Use auto.arima function to get the optimal auto.arima model
+  autoarima1 <- auto.arima(tsdata)
+  forecast1 <- forecast(autoarima1, h=20) 
+  plot(forecast1, xlab = "Year", ylab = "Number of CO2 Emission")
+  minor.tick(nx = 5, ny = 3, tick.ratio = 0.5)
+  grid(nx = NULL, ny = NULL,
+       lty = 2,      # Grid line type
+       col = "gray", # Grid line color
+       lwd = 2)      # Grid line width
+}
 
 #### --- UI ----
 ui <- dashboardPage(
@@ -147,85 +205,85 @@ ui <- dashboardPage(
                    width = 12,
                    solidHeader = TRUE,
                    collapsible = TRUE,
-                   span((h4("Carbon footprint is the total quantity of carbon dioxide (CO2) that a person, business, product, or event emits, either directly or indirectly. As we ")), style="color:#06283D"),
-                   span((h4("may already be aware, carbon dioxide is a form of greenhouse gas that has been significantly impacting our world, especially in terms of climate ")), style="color:#06283D"),
-                   span((h4("changes. Despite the fact that there is a growing awareness of carbon emissions, our society has only made modest to minimal efforts. Therefore, we ")), style="color:#06283D"),
-                   span((h4("created this website to highlight and remind people how important this issue is. It is our aim that this website will provide valuable insight based ")), style="color:#06283D"),
-                   span((h4("on our study and raise society's understanding of the need to preserve the environment. ")), style="color:#06283D")
-                 )),
+                   h3("Carbon footprint is the total quantity of carbon dioxide (CO2) that a person, business, product, or event emits, either directly or indirectly. 
+                     As we may already be aware, carbon dioxide is a form of greenhouse gas that has been significantly impacting our world, especially in terms of climate changes. 
+                     Despite the fact that there is a growing awareness of carbon emissions, our society has only made modest to minimal efforts. 
+                     Therefore, we created this website to highlight and remind people how important this issue is. 
+                     It is our aim that this website will provide valuable insight based on our study and raise society's understanding of the need to preserve the environment. "),
+                   style="color:#06283D")
+                 ),
                
-                 fluidRow(
-                   box(
-                     title = "Problem Statement",
-                     status = "primary",
-                     width = 12,
-                     solidHeader = TRUE,
-                     collapsible = TRUE, 
-                     span((h4("The latest reports of abrupt climate changes around the world have been hot topics for some time. However, we haven't come across any websites that ")), style="color:#06283D"),
-                     span((h4("focus on analyzing and delivering data stories on carbon footprint in order to address this issue.")), style="color:#06283D")
-  
-                   )),
-                 
-                 fluidRow(  
-                   box(
-                     title = "Objectives",
-                     status = "primary",
-                     solidHeader = TRUE,
-                     collapsible = TRUE,
-                     span(h4(tags$li("To provide an overall picture of the amount of CO2 emitted over time.")), style="color:#06283D"),
-                     span(h4(tags$li("To display which regions emit the most CO2 based on year and source of emission.")), style="color:#06283D"),
-                     span(h4(tags$li("To determine which sources contribute the most to CO2 emissions for each region.")), style="color:#06283D"),
-                     span(h4(tags$li("To demonstrate how carbon footprint will evolve in the future.")), style="color:#06283D")
-                     
-                   ),
-                   box(
-                     title = "Solution proposed",
-                     status = "primary",
-                     solidHeader = TRUE, 
-                     collapsible = TRUE,
-                     span((h4("A website with two tabs: ")), style="color:#06283D"),
-                     span(h4(tags$li("Plots "), style="color:#06283D")),
-                     span(h4(tags$li("Advance "), style="color:#06283D", style = "size:20")),
-                     span((h4("to achieve our objectives.")), style="color:#06283D")
-                     
-                   ))
-            
-        ),
-        tabPanel("Plots",
-                 fluidRow(
-                   box(
-                     title = "Global Trend",
-                     status = "primary",
-                     width = 12,
-                     solidHeader = TRUE,
-                     collapsible = TRUE, 
-                     plotlyOutput("global_plot")
-                   )
-                  ),
-                 
-                 fluidRow(
-                   box(
-                     title = "Country with the highest CO2 emissions",
-                     status = "primary",
-                     width = 12,
-                     solidHeader = TRUE,
-                     sidebarLayout(
-                       sidebarPanel(
-                         span(tags$i(h6("Identify countries which emits CO2 the most based on the chosen year and source of emission.")), style="color:#045a8d"),
-                         
-                         pickerInput("year_select", "Year:",   
-                                     choices = as.numeric(unique(sort(cf_countries$year, decreasing = TRUE) )), 
-                                     multiple = FALSE),
-                         
-                         pickerInput("source_select", "Source of emission:",   
-                                     choices = c("Cement","Coal", "Gas", "Oil"), 
-                                     multiple = FALSE)
-                         
-                       ),
+               fluidRow(
+                 box(
+                   title = "Problem Statement",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   collapsible = TRUE, 
+                   h4("At the era of conscious-technology, organizations are now improving strategies to reduce carbon footprints using Data Science application."),
+                   style="color:#06283D")
+                   
+                 ),
+               
+               fluidRow(  
+                 box(
+                   title = "Objectives",
+                   status = "primary",
+                   solidHeader = TRUE,
+                   collapsible = TRUE,
+                   span(h4(tags$li("To provide an overall picture of the amount of CO2 emitted over time.")), style="color:#06283D"),
+                   span(h4(tags$li("To display which regions emit the most CO2 based on year and source of emission.")), style="color:#06283D"),
+                   span(h4(tags$li("To determine which sources contribute the most to CO2 emissions for each region.")), style="color:#06283D"),
+                   span(h4(tags$li("To demonstrate how carbon footprint will evolve in the future.")), style="color:#06283D")
+                   
+                 ),
+                 box(
+                   title = "Solution proposed",
+                   status = "primary",
+                   solidHeader = TRUE, 
+                   collapsible = TRUE,
+                   span((h4("A dashboard to help:")), style="color:#06283D"),
+                   span(h4(tags$li("Determine major sources of carbon emissions. "), style="color:#06283D")),
+                   span(h4(tags$li("Produce trends of Co2 globally, between continents and countries. "), style="color:#06283D", style = "size:20")),
+                   span(h4(tags$li("Forecast global trends of Co2 for the next 20 years. "), style="color:#06283D", style = "size:20"))
+                 ))
+               
+      ),
+      tabPanel("Plots",
+               fluidRow(
+                 box(
+                   title = "Global Trend",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   collapsible = TRUE, 
+                   plotlyOutput("global_plot")
+                 )
+               ),
+               
+               fluidRow(
+                 box(
+                   title = "Country with the highest CO2 emissions",
+                   status = "primary",
+                   width = 12,
+                   solidHeader = TRUE,
+                   sidebarLayout(
+                     sidebarPanel(
+                       span(tags$i(h6("Identify countries which emits CO2 the most based on the chosen year and source of emission.")), style="color:#045a8d"),
                        
-                       mainPanel(
-                         plotlyOutput("top_plot")
-                       )
+                       pickerInput("year_select", "Year:",   
+                                   choices = as.numeric(unique(sort(cf_countries$year, decreasing = TRUE) )), 
+                                   multiple = FALSE),
+                       
+                       pickerInput("source_select", "Source of emission:",   
+                                   choices = c("Cement","Coal", "Gas", "Oil"), 
+                                   multiple = FALSE)
+                       
+                     ),
+                     
+                     mainPanel(
+                       plotlyOutput("top_plot")
+                     )
                    )
                  )
                ),
@@ -267,12 +325,46 @@ ui <- dashboardPage(
                  box(
                    title = "Heat Map",
                    status = "primary",
-                   width = 12,
+                   width = 6,
                    solidHeader = TRUE,
                    collapsible = FALSE,
-                   plotlyOutput("forecast_plot", height = "300px")
+                   plotlyOutput("heatmap", height = "500px"),
+                   h4(
+                     "This heatmap potrays the correlation between different types of 
+                     sources of CO2 emission. White color indicates least to zero correlation between sources,
+                     while red color indicates high correlation between sources."), style="color:#06283D"
+                 ),
+                 box(
+                   title = "World's Projection",
+                   status = "primary",
+                   width = 6,
+                   solidHeader = TRUE,
+                   collapsible = FALSE,
+                   plotlyOutput("projection", height = "500px"),
+                   h4(
+                     "User can interact with this projection of CO2 emission around the world from the year 1750 to 2020."
+                   ),style="color:#06283D"
                  )
-                )
+               ),
+               fluidRow(
+                 box(
+                   title = "Forecasting Global CO2 Emission For The Next 20 Years",
+                   status = "primary",
+                   width = 8,
+                   solidHeader = TRUE,
+                   collapsible = FALSE,
+                   plotOutput("forecast", height = "500px")
+                 ),
+                 box(
+                   title = "Summary of Forecast",
+                   status = "primary",
+                   width = 4,
+                   solidHeader = TRUE,
+                   collapsible = FALSE,
+                   verbatimTextOutput("summary"),
+                   span((h4("The percentage of accuray = 100 - MAPE")), style="color:#06283D")
+                 )
+               )
       ),
       
       
@@ -283,12 +375,12 @@ ui <- dashboardPage(
                    status = "primary",
                    width = 12,
                    solidHeader = TRUE,
-                   span((h4("First and foremost, we would like to thank the Ministry of Science, Technology, and Innovation for hosting the Malaysia Techlympics. We are able to ")), style="color:#06283D"),
-                   span((h4("explore and learn more about how to use our knowledge to address challenges in the real world.")), style="color:#06283D"),
-                   span((h4(tags$br("We would also like to convey our sincere gratitude to the lecturers at the Faculty of Computer Science (FCSIT) at the University of Malaya for "))), style="color:#06283D"),
-                   span((h4("guiding us to where we are now.  With their direction, we are able to convey our ideas and solutions as effectively as possible. ")), style="color:#06283D"),
-                   span((h4(tags$br("Last but not least, we would like to express our special thanks to our family and friends for their unwavering support to complete this project. "))), style="color:#06283D")
-
+                   h4("First and foremost, we would like to thank the Ministry of Science, Technology, and Innovation for hosting the Malaysia Techlympics. 
+                      We are able to explore and learn more about how to use our knowledge to address challenges in the real world.
+                      We would also like to convey our sincere gratitude to the lecturers 
+                      at the Faculty of Computer Science (FCSIT) at the University of Malaya for guiding us 
+                      to where we are now.  With their guidance, we are able to convey our ideas and solutions as effectively as possible. 
+                      Last but not least, we would like to express our special thanks to our family and friends for their unwavering support to complete this project. "), style="color:#06283D"
                  )
                ),
                
@@ -299,24 +391,24 @@ ui <- dashboardPage(
                    width = 12,
                    solidHeader = TRUE,
                    box(
-                     tags$img(src="Ice cream.jpg",height='130',width='100'),
-                     span(h4(tags$b("Norhidayah Arbee")), style="color:#06283D"),
+                     tags$img(src="dayah.jpg",height='130',width='100'),
+                     span(h4(tags$b("Siti Norhidayah Abdul Bari Arbee")), style="color:#06283D"),
                      span((h5("3rd year Data Science Student | University Malaya")), style="color:#06283D"),
-                     span(tags$a(h5("")), style="color:#06283D")
+                     span(tags$a(h5("https://www.linkedin.com/in/norhidayah-arbee/")), style="color:#06283D")
                      
-                    
+                     
                      
                    ),
                    box(
                      tags$img(src="arina.jpg",height='130',width='100'),
-                     span(h4(tags$b("Arina Houri")), style="color:#06283D"),
+                     span(h4(tags$b("Arina Natasha Houri")), style="color:#06283D"),
                      span((h5("2nd year Data Science Student | University Malaya")), style="color:#06283D"),
-                     span(tags$a(h5("www.linkedin.com/in/arina-houri-00a972234")), style="color:#06283D")
+                     span(tags$a(h5("www.linkedin.com/in/arina-houri")), style="color:#06283D")
                      
                    )
                  )
-                )
-       
+               )
+               
       )#tabPanel
     )#tabsetPanel
   ),#dashboardBody
@@ -333,13 +425,13 @@ server <- function(input, output, session) {
     if (input$level_select=="Country") {
       updatePickerInput(session = session, inputId = "region_select", 
                         choices = as.character(unique(cf_countries$country))
-                       )
+      )
     }
     
     if (input$level_select=="Continent") {
       updatePickerInput(session = session, inputId = "region_select", 
                         choices = as.character(unique(cf_continents$continent))
-                        )
+      )
     }
     
   }, ignoreInit = TRUE)
@@ -349,7 +441,7 @@ server <- function(input, output, session) {
   top_reactive_db = reactive({
     
     db = cf_countries
-
+    
     if(input$source_select == "Cement"){
       db$sources = db$share_global_cement_co2
     }
@@ -403,9 +495,24 @@ server <- function(input, output, session) {
     sources_region_cumulative_plot(country_reactive_db())
   })
   
-  #forecast
-  output$forecast_plot <- renderPlotly({
-    forecast_co2_plot(cf_global)
+  #advanced - heatmap
+  output$heatmap <- renderPlotly({
+    heatmap_plot(cf_global)
+  })
+  
+  #advanced - projection
+  output$projection <- renderPlotly({
+    projection_plot(cf_countries)
+  })
+  
+  #advanced - forecast
+  output$forecast <- renderPlot({
+    forecast_plot(cf_global)
+  })
+  
+  #advanced - summary
+  output$summary <- renderPrint({
+    summary(autoarima1)
   })
 }
 
